@@ -1,0 +1,83 @@
+$Id$
+
+===========================
+Things to fix at some point
+===========================
+
+Note: All of these are "nice to have" things, not essential
+for functionality and (hopefully) not the cause of bugs. We
+are hiding the file all the way down here for a reason...
+
+- for some reason DASM doesn't exit with proper code
+  - echo $? after an error still says 0, not useful...
+
+- negative.asm test case still not quite right
+  - need to make range checking for literals fool proof
+
+- use GNU indent to make code more consistent
+  - current .indent.pro not right, need to adjust
+  - when to do this? before 2.20.11?
+  - maybe astyle is a better, more conservative choice?
+
+- hash1() exists twice, in main.c and symbol.c
+  - very similar, should be unified?
+  - hash function doesn't seem very good?
+  - NOTE: if both are used on the same global data
+    structures, there may be a bug here after all!
+
+- several things in main.c are dubious
+  - strlower() exported, not used outside
+  - the *alloc functions, used all over
+  - all that should go into a separate util.c
+    to properly modularize
+  - asmerr should be refactored, type for error
+    code can be enum type, does it really have
+    to return the error code? strange recursion
+    may be the root of that...
+
+- MNEMONIC tables could be simplified
+  - currently they are written directly, could
+    use a macro (or several) to fill in mostly
+    identical information
+  - a deeper issues is that the same struct is
+    use statically as is dynamically later; so
+    I think we could get rid of the whole NULL
+    for the *next if we had a version for the
+    static stuff and a version (close to the
+    current one) for the dynamic stuff; do we
+    even need the static stuff in the first
+    place? a function to add an opcode and
+    the relevant information might work just
+    as well...
+
+- extension support and error codes
+  - the F8 extension set the example of extending the
+    global error codes
+  - luckily F8 doesn't check for a range of error code
+    values, otherwise we'd been stuck with having to
+    be careful about order in there
+  - it might be good to convert the example error codes
+    to have an explicit "ERROR_F8_CODES_START" value and
+    of course an "_END" as well, then extensions can
+    check ranges as long as we don't *mix* extensions in
+    the enum; but that would be bad style anyway...
+
+- both memusage and valgrind say that we are leaking
+  - however, this probably only matters for Amiga OS 3 users
+    - even there the C library hopefully takes care of it?
+  - any OS out there where memory is not freed on exit?
+
+- Matt Dillon's fixes and extensions
+  - dasm-2.15 permalloc patch for SPARC? seems simple
+  - new version of ftohex? should import easily...
+    - actually, there's more to this as we should add options
+      - to select CTRL-Z at the end (old EEPROM programmers)
+      - CR/LF separators (Intel's standard is flexible)
+      - see Matt's email 2008/04/06
+  - new ftobin? obviously easy, we don't have one :-)
+  - harder: compare code bases for other fixes! :-/
+
+- new copyright/license header
+  - should Thomas be in there because of F8 support?
+  - who else holds a copyright on some piece of DASM?
+
