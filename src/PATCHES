@@ -1,0 +1,305 @@
+$Id$
+
+================================================
+Collection of random patches from around the net
+================================================
+
+This is a random collection of patches for DASM I ran across
+over time; some of these may be included in future releases,
+others will probably never make it in. But it's good to have
+them in one place. I use a *very* long line one "-" between
+each one, hopefully that'll work out okay. :-)
+
+-------------------------------------------------------------------------------
+FROM: http://biglist.com/lists/stella/archives/200205/msg00008.html
+-------------------------------------------------------------------------------
+
+Subject: Re: [stella] help! distella -> dasm case sensitivity (fwd)
+From: Adam Wozniak <adam@xxxxxxxxxxxxxxxx>
+Date: Wed, 1 May 2002 09:53:05 -0700 (PDT)
+On Wed, 1 May 2002, Chris Wilkson wrote:
+> Though I really would like to turn off case sensitivity in DASM.  Any way to
+> do that?  It would really help speed up testing for the new TIA....
+
+It is fairly simple to hack the DASM source to behave
+the way you want it to.
+
+The patch below modifies two functions;  the symbol table
+is now hashed in a case insensitive manner, and the symbol
+table lookup tries an caseless compare when an exact match
+fails.
+
+The patch below is against DASM 2.15
+
+--Adam Wozniak
+
+===BEGIN SCRIPT ===============================
+Script started on Wed May  1 08:52:28 2002
+[adam dasm]$ cat test.asm
+   processor 6502
+
+   seg.u code
+   org 0
+
+      nop
+      bne   skip
+      nop
+Skip  nop
+      nop
+
+   seg.u data
+   org 100
+
+   seg.u bss
+   org 200
+
+[adam dasm]$ dasm/bin/dasm test.asm
+DASM V2.15, (c)Copyright 1988-2002 Matthew Dillon, All Rights Reserved
+Error: source is not resolvable.
+re-run with verbose option 2 or higher to determine problem
+
+[adam dasm]$ dasm-caseless/bin/dasm test.asm
+DASM V2.15, (c)Copyright 1988-2002 Matthew Dillon, All Rights Reserved
+
+[adam dasm]$ exit
+
+Script done on Wed May  1 08:52:57 2002
+===END SCRIPT==================================
+
+===BEGIN PATCH ================================
+diff -urbBN dasm/src/asm.h dasm-caseless/src/asm.h
+--- dasm/src/asm.h	Sat Jan  2 22:59:46 1999
++++ dasm-caseless/src/asm.h	Wed May  1 08:38:36 2002
+@@ -10,6 +10,7 @@
+ #include <stdio.h>
+ #include <stdlib.h>
+ #include <string.h>
++#include <ctype.h>
+ 
+ #define Prototype extern
+ 
+diff -urbBN dasm/src/symbols.c dasm-caseless/src/symbols.c
+--- dasm/src/symbols.c	Sat Jan  2 22:59:46 1999
++++ dasm-caseless/src/symbols.c	Wed May  1 08:38:20 2002
+@@ -74,6 +74,13 @@
+ 	if (sym->namelen == len && bcmp(sym->name, str, len) == 0)
+ 	    break;
+     }
++    if (!sym)
++    {
++        for (sym = SHash[h1]; sym; sym = sym->next) {
++	    if (sym->namelen == len && strncasecmp(sym->name, str, len) == 0)
++	        break;
++        }
++    }
+     return(sym);
+ }
+ 
+@@ -118,7 +125,7 @@
+     register uword result = 0;
+ 
+     while (len--)
+-	result = (result << 2) ^ *str++;
++	result = (result << 2) ^ tolower(*str++);
+     return(result & SHASHAND);
+ }
+ 
+===END PATCH ==================================
+
+
+-- 
+This is  n ?nrcu?cemert for thc transcendental r?n? The train now standirg
+leavc? for higher ?l?nes. Due tc a derai|rent, thcre vill be no other train.
+Sc wry rot h?? cn this cre? 
+
+adam@xxxxxxxxxxxxxxxx        http://cuddlepuddle.org/~adam/pgp.txt
+
+-------------------------------------------------------------------------------
+FROM: Matt Dillon's 2.16 release, file 65c02.add
+-------------------------------------------------------------------------------
+
+Subject: DASM
+
+	I am currently working on a project which entails emulating an 
+	Apple //e on the Amiga, through software.  After completing the
+	processor emulation module, I used DASM to develop 'test' code
+	for it.  Unfortunately, the version I have doesn't support 
+	65C02, which has additional instructions, and addressing modes.
+	I had no problems adding the new instructions, but I am having
+	trouble adding the new addressing modes.  Any help would be 
+	appreciated.  I have included the 65c02 new opcodes, in case
+	you wish to add them to DASM.
+	
+	p.s.  Not to sound like a little kid, or that I'm sucking up, but
+			how do you ever find time to churn out so many damn good
+			applications?  I use Dmouse, Dnet, UUCP, Dasm, and have
+			used others, all very complete, and well done.  If you 
+			send me your current address, I would be happy to donate
+			some funds to your cause!!
+
+	[Add these to mne6502.c or to a new mne65c02.c]
+
+NULL, v_mnemonic, "bit", 0, AF_IMM8|AF_BYTEADR|AF_BYTEADRX|AF_WORDADR|AF_WORDADRX,
+{ 0x89, 0x24, 0x34, 0x2C, 0x3C }, /* Additional addressing modes added */
+NULL, v_mnemonic, "bra", 0, AF_REL, { 0x80 }, /* New */
+NULL, v_mnemonic, "dea", 0, AF_IMP, { 0x3a }, /* New */
+NULL, v_mnemonic, "ina", 0, AF_IMP, { 0x1a }, /* New */
+NULL, v_mnemonic, "phx", 0, AF_IMP, { 0xda }, /* New */
+NULL, v_mnemonic, "phy", 0, AF_IMP, { 0x5a }, /* New */
+NULL, v_mnemonic, "plx", 0, AF_IMP, { 0xfa }, /* New */
+NULL, v_mnemonic, "ply", 0, AF_IMP, { 0x7a }, /* New */
+NULL, v_mnemonic, "stz", 0, AF_BYTEADR|AF_BYTEADRX|AF_WORDADR|AF_WORDADRX,
+{ 0x64, 0x74, 0x9C, 0x9E },	/* New */
+NULL, v_mnemonic, "trb", 0, AF_BYTEADR|AF_WORDADR,
+{ 0x14, 0x1C },					/* New */
+NULL, v_mnemonic, "tsb", 0, AF_BYTEADR|AF_WORDADR,
+{ 0x04, 0x0C },					/* New */
+
+	I have been testing these, and they all work correctly.
+
+Michael Marvin Morrison         /|                             |\
+mmm@reaper.chi.il.us <or>      | |  In Stereo Where Available  | |
+reaper!mmm@miroc.chi.il.us      \|                             |/
+
+-------------------------------------------------------------------------------
+FROM: forwarded by Andrew Davie
+-------------------------------------------------------------------------------
+
+-----Original Message-----
+From: Eduardo Casino Almao [mailto:casino_e@movistar.es]
+Sent: Saturday, August 25, 2007 1:46 AM
+To: Andrew Davie
+Subject: dasm: bug in string conversion
+
+Hello Andrew,
+
+I hope you are still maintaining DASM. It seems that it has not been
+updated for a while now.
+
+I've found a bug in the string conversion feature ([exp]d) I'm using
+version 2.20.10b
+
+Basically, if exp is a not-yet-resolved label, the assembler aborts with
+"program.a: (XX): error Label mismatch...
+
+You will see it immediately with this test program:
+
+;   Test case for the string conversion bug in DASM
+;
+
+	processor 6502
+
+	org	$0801
+
+	word	endprg			; pointer to next line
+	word	1968			; line number
+	byte	$9e			; SYS token
+	byte	[start]d		; ASCII of SYS address
+	byte	" TESTPROG BY TESTSOFT"	; Show copyright
+endprg	byte	0,0,0			; End of BASIC program
+
+
+start	rts
+
+
+The assembler outputs:
+
+DASM V2.20.10, Macro Assembler (C)1988-2004
+testcase.a (13): error: Label mismatch...
+ --> endprg 081c
+testcase.a (16): error: Label mismatch...
+ --> start 081f
+Unrecoverable error(s) in pass, aborting assembly!
+Complete.
+
+The offending code is in symbols.c, lines 203 to 210. I think that there
+should be an extra condition, so if in the previous pass it has been a
+string conversion, just go for another pass.
+
+Best regards,
+Eduardo.
+
+-------------------------------------------------------------------------------
+FROM: forwarded by Andrew Davie
+-------------------------------------------------------------------------------
+
+-----Original Message-----
+From: Ben Combee [mailto:ben.combee@gmail.com] On Behalf Of Ben Combee
+Sent: Thursday, February 28, 2008 8:56 AM
+To: atari2600@taswegian.com
+Subject: Bitmap format patch for DASM
+
+Hi, Andrew... I just started up a 2600 project of my own, and I've done
+a few local modifications to the DASM source -- most are to make it
+compile without warnings in CodeWarrior for Windows, but I also added a
+new integer representation inspired by some of the disassemblies I've
+seen.  I call it bitmap format, and instead of a leading %, you use a
+leading | followed by dots and Xs.  A trailing | is allowed, but not
+required.  Here's an example.
+
+PfDataStart
+   .byte |..XXX...|
+   .byte |....X...|
+   .byte |X..XX..X|
+   .byte |.XX..XXX|
+   .byte |.XX..XXX|
+   .byte |X..XX..X|
+   .byte |....X...|
+   .byte |..XXX...|
+PfDataEnd
+
+I find it easier to visualize the bitmaps in the code using this format,
+as 0's and 1's aren't that distinctive.
+
+Here's the code change made to exp.c.  I added this new function just
+before pushbin():
+
+char *pushbitmap(char *str)
+{
+    long val = 0;
+    while (*str == '.' || *str == 'X') {
+        val = (val << 1) | (*str == 'X');
+        ++str;
+    }
+    if (*str == '|') {
+        ++str;
+    }
+    stackarg(val, 0, NULL);
+    return str;
+}
+
+Then I modified the case statement around line 314:
+
+
+        case '|':   /*  13: |   11: ||              */
+
+            if (str[1] == '.' || str[1] == 'X')
+            {
+                str = pushbitmap(str+1);
+            }
+            else if (str[1] == '|')
+            {
+                doop((opfunc_t)op_oror, 11);
+                str += 2;
+            }
+            else
+            {
+                doop((opfunc_t)op_or, 13);
+                ++str;
+            }
+            break;
+
+
+I'd be glad to send the other changes, but they're mostly just adding
+"static" in front of local functions and cleaning up some loops that
+used a ";" to do nothing into using "{ }" instead (it tells the compiler
+that you intended on the empty action rather than just using a semicolon
+accidentally by habit.
+
+I'm looking forward to Boulder Dash and I'm also enjoying your old
+tutorial series on Atari Age.  Thanks!
+
+-------------------------------------------------------------------------------
+TODO: Find more patches... :-)
+-------------------------------------------------------------------------------
+
